@@ -1,6 +1,7 @@
 import { BRAND } from '../utils/colors';
+import { formatDateTime } from '../utils/format';
 
-export default function Header({ nameCount, sectorFilter, onSectorFilterChange, sectors }) {
+export default function Header({ nameCount, sectorFilter, onSectorFilterChange, sectors, generatedAt }) {
   return (
     <>
       <div
@@ -62,6 +63,18 @@ export default function Header({ nameCount, sectorFilter, onSectorFilterChange, 
               >
                 SUMRIDGE PARTNERS
               </div>
+              {generatedAt && (
+                <div
+                  style={{
+                    color: BRAND.muted,
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: 8,
+                    lineHeight: '10px',
+                  }}
+                >
+                  Last updated: {formatDateTime(generatedAt)}
+                </div>
+              )}
             </div>
           </div>
 

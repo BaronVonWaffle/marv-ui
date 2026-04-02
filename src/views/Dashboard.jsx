@@ -3,7 +3,7 @@ import StatCard from '../components/StatCard';
 import SectorTag from '../components/SectorTag';
 import SeverityDot from '../components/SeverityDot';
 import { BRAND, SCORE_COLORS } from '../utils/colors';
-import { formatDate } from '../utils/format';
+import { formatDate, formatDateWithYear } from '../utils/format';
 
 const mono = "'JetBrains Mono', monospace";
 const sans = 'Arial, sans-serif';
@@ -78,16 +78,22 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
 
   const calendar = useMemo(() => {
     if (!data?.economic_calendar?.length) return [];
+    const today = new Date().toISOString().split('T')[0];
     const sorted = [...data.economic_calendar].sort((a, b) => (a.event_date > b.event_date ? 1 : -1));
-    const high = sorted.filter((e) => e.impact_level?.toLowerCase() === 'high');
-    return (high.length > 0 ? high : sorted).slice(0, 5);
+    const future = sorted.filter((e) => e.event_date >= today);
+    if (future.length >= 5) return future.slice(0, 5);
+    const past = sorted.filter((e) => e.event_date < today).reverse();
+    return [...future, ...past].slice(0, 5);
   }, [data]);
 
   const catalysts = useMemo(() => {
     if (!data?.catalysts?.length) return [];
+    const today = new Date().toISOString().split('T')[0];
     const sorted = [...data.catalysts].sort((a, b) => (a.catalyst_date > b.catalyst_date ? 1 : -1));
-    const high = sorted.filter((c) => c.urgency?.toLowerCase() === 'high');
-    return (high.length > 0 ? high : sorted).slice(0, 5);
+    const future = sorted.filter((c) => c.catalyst_date >= today);
+    if (future.length >= 5) return future.slice(0, 5);
+    const past = sorted.filter((c) => c.catalyst_date < today).reverse();
+    return [...future, ...past].slice(0, 5);
   }, [data]);
 
   const briefs = useMemo(() => {
@@ -100,6 +106,7 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
 
   const gainers = data?.equity_movers?.top_gainers || [];
   const losers = data?.equity_movers?.top_losers || [];
+  const moversDate = data?.equity_movers?.calc_date || (gainers[0]?.calc_date) || null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -121,8 +128,8 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
 
       {/* SECTION 2: Equity Movers */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <MoversTable title="Top Gainers (1d)" rows={gainers} onTickerClick={onTickerClick} />
-        <MoversTable title="Top Losers (1d)" rows={losers} onTickerClick={onTickerClick} />
+        <MoversTable title="Top Gainers (1d)" rows={gainers} onTickerClick={onTickerClick} calcDate={moversDate} />
+        <MoversTable title="Top Losers (1d)" rows={losers} onTickerClick={onTickerClick} calcDate={moversDate} />
       </div>
 
       {/* SECTION 3: Macro Calendar + Catalysts */}
@@ -205,7 +212,7 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {brief.sector && <SectorTag sector={brief.sector} />}
               <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 600, color: BRAND.text }}>
-                Morning Brief — {formatDate(brief.date)}
+                Morning Brief — {formatDateWithYear(brief.brief_date)}
               </span>
               {brief.quiet_day && (
                 <span style={{ fontFamily: sans, fontSize: 9, color: BRAND.muted, background: BRAND.altRow, borderRadius: 3, padding: '1px 6px' }}>
@@ -238,10 +245,15 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
   );
 }
 
-function MoversTable({ title, rows, onTickerClick }) {
+function MoversTable({ title, rows, onTickerClick, calcDate }) {
   return (
     <div style={card}>
       <div style={sectionLabel}>{title}</div>
+      {calcDate && (
+        <div style={{ fontSize: 9, color: BRAND.muted, fontFamily: 'Arial, sans-serif', marginTop: -4, marginBottom: 4 }}>
+          as of {formatDate(calcDate)}
+        </div>
+      )}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: sans, fontSize: 11 }}>
         <thead>
           <tr>

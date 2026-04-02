@@ -86,6 +86,7 @@ export default function App() {
         sectorFilter={sectorFilter}
         onSectorFilterChange={setSectorFilter}
         sectors={sectors}
+        generatedAt={data?.generated_at}
       />
       <NavTabs activeView={activeView} onViewChange={setActiveView} />
 

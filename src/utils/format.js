@@ -9,11 +9,32 @@ export function formatScore(value) {
   return value > 0 ? `+${str}` : str;
 }
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 export function formatDate(str) {
   if (!str) return '—';
   const [year, month, day] = str.split('-');
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return months[parseInt(month) - 1] + ' ' + parseInt(day);
+  return MONTHS[parseInt(month) - 1] + ' ' + parseInt(day);
+}
+
+export function formatDateWithYear(str) {
+  if (!str) return '—';
+  const [year, month, day] = str.split('-');
+  return MONTHS[parseInt(month) - 1] + ' ' + parseInt(day) + ', ' + year;
+}
+
+export function formatDateTime(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  if (isNaN(d)) return '—';
+  const month = MONTHS[d.getMonth()];
+  const day = d.getDate();
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const mins = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return month + ' ' + day + ', ' + year + ' ' + hours + ':' + mins + ' ' + ampm;
 }
 
 export function colorForDev(value) {
