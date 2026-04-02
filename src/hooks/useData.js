@@ -7,11 +7,11 @@ export default function useData() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/data/pipeline_snapshot.json').then((r) => {
+      fetch(import.meta.env.BASE_URL + 'data/pipeline_snapshot.json').then((r) => {
         if (!r.ok) throw new Error(`pipeline_snapshot: ${r.status}`);
         return r.json();
       }),
-      fetch('/data/research_manifest.json')
+      fetch(import.meta.env.BASE_URL + 'data/research_manifest.json')
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
     ])
