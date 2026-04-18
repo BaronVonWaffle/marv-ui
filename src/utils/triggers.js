@@ -133,7 +133,10 @@ export function evaluateTriggers({
       severity += tierFlipSeverity(priorLabel, currentLabel) * 3;
     }
 
-    if (divLabel === 'credit_lags' || divLabel === 'credit_leads') {
+    // DIVERGENCE currently fires only on credit_lags. credit_leads deferred pending
+    // pipeline-side audit of divergence_score methodology (see: KGS misclassification
+    // as credit_leads despite year-long aligned price action).
+    if (divLabel === 'credit_lags') {
       triggers.push('DIVERGENCE');
       divergenceKind = divLabel;
       severity += 2;
@@ -172,11 +175,7 @@ export function sortNotables(rows) {
 export function triggerLabel(row) {
   const words = row.triggers.map((t) => {
     if (t === 'TIER_FLIP') return row.flipArrow ? `Tier flip ${row.flipArrow}` : 'Tier flip';
-    if (t === 'DIVERGENCE') {
-      if (row.divergenceKind === 'credit_lags') return 'Divergence (credit lags)';
-      if (row.divergenceKind === 'credit_leads') return 'Divergence (credit leads)';
-      return 'Divergence';
-    }
+    if (t === 'DIVERGENCE') return 'Divergence';
     if (t === 'SPREAD') return 'Spread';
     return t;
   });
