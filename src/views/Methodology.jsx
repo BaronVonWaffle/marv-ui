@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { BRAND } from '../utils/colors';
 
 const sans = 'Arial, sans-serif';
@@ -136,8 +136,33 @@ Monday Full Refresh (~$6-8):
   },
 ];
 
-export default function Methodology() {
+export default function Methodology({ data }) {
   const [openIndex, setOpenIndex] = useState(0);
+
+  const v2Coverage = useMemo(() => {
+    const v1 = data?.scores || [];
+    const v2 = data?.fundamental_scores_v2 || [];
+    const v2Set = new Set();
+    for (const r of v2) if (r?.ticker) v2Set.add(r.ticker);
+    let missing = 0;
+    for (const r of v1) if (r?.ticker && !v2Set.has(r.ticker)) missing += 1;
+    return { missing, total: v1.length };
+  }, [data]);
+
+  const allSections = useMemo(() => {
+    const v2Body = (
+      `V2 Coverage. The V2 fundamental score requires the FMP-safe factor set across 5 buckets: ` +
+      `Leverage, Market Risk, Cash Flow, Profitability, Default Risk. Tickers missing required factor ` +
+      `data fall back to V1 composite scoring. Currently ${v2Coverage.missing} of ${v2Coverage.total} ` +
+      `names are on V1 fallback.\n\n` +
+      `V2 uses geometric aggregation with forced 20/55/25 Green/Yellow/Red distribution. V1 used additive ` +
+      `weighted averaging without forced distribution. V2 coverage expands as factor completeness improves upstream.`
+    );
+    return [
+      ...SECTIONS,
+      { title: 'V2 Coverage', body: v2Body, anchorId: 'v2-coverage' },
+    ];
+  }, [v2Coverage]);
 
   function toggle(i) {
     setOpenIndex(openIndex === i ? -1 : i);
@@ -145,10 +170,14 @@ export default function Methodology() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {SECTIONS.map((section, i) => {
+      {allSections.map((section, i) => {
         const open = openIndex === i;
         return (
-          <div key={i} style={{ background: BRAND.card, border: `1px solid ${BRAND.border}`, borderRadius: 5, overflow: 'hidden' }}>
+          <div
+            key={i}
+            id={section.anchorId || undefined}
+            style={{ background: BRAND.card, border: `1px solid ${BRAND.border}`, borderRadius: 5, overflow: 'hidden' }}
+          >
             <div
               onClick={() => toggle(i)}
               style={{

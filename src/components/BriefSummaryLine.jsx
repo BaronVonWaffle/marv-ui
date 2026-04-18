@@ -3,14 +3,35 @@ import { BRAND } from '../utils/colors';
 const sans = 'Arial, sans-serif';
 const BORDER_INFO = '#3D7A9E';
 
-export default function BriefSummaryLine({ data }) {
-  const raw =
-    (data?.morning_briefs && !Array.isArray(data.morning_briefs) && data.morning_briefs.desk_brief) ||
-    data?.desk_brief ||
-    null;
+function isAllCapsHeader(t) {
+  return t.length > 2 && /[A-Za-z]/.test(t) && !/[a-z]/.test(t);
+}
 
-  const teaser = raw ? String(raw).trim().slice(0, 80) : null;
-  const text = teaser ? `${teaser}${raw.length > 80 ? '…' : ''}` : 'Brief loading at 6:00 AM';
+function firstSubstantiveLine(text) {
+  if (!text) return null;
+  const lines = text.split(/\r?\n/);
+  let skippedFirstHeader = false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (/^=+$/.test(t)) continue;
+    if (/^MORNING PLAYBOOK/i.test(t)) continue;
+    if (!skippedFirstHeader && isAllCapsHeader(t)) {
+      skippedFirstHeader = true;
+      continue;
+    }
+    return t;
+  }
+  return null;
+}
+
+export default function BriefSummaryLine({ data }) {
+  const brief = data?.desk_brief || null;
+  const substantive = firstSubstantiveLine(brief);
+  const hasContent = !!substantive;
+  const teaser = hasContent
+    ? substantive.slice(0, 80) + (substantive.length > 80 ? '…' : '')
+    : 'Brief loading at 6:00 AM';
 
   const handleClick = () => {
     const el = document.getElementById('morning-brief-full');
@@ -28,14 +49,14 @@ export default function BriefSummaryLine({ data }) {
         cursor: 'pointer',
         fontFamily: sans,
         fontSize: 11,
-        color: teaser ? BRAND.text : BRAND.textSecondary,
+        color: hasContent ? BRAND.text : BRAND.textSecondary,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
       }}
-      title={teaser ? raw : text}
+      title={hasContent ? substantive : teaser}
     >
-      {text}
+      {teaser}
     </div>
   );
 }

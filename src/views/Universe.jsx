@@ -33,10 +33,34 @@ function sortVal(row, key, type) {
   return (v || '').toString().toLowerCase();
 }
 
+const V2_NA_BADGE_STYLE = {
+  display: 'inline-block',
+  background: BRAND.navyDark,
+  color: BRAND.textSecondary,
+  fontFamily: sans,
+  fontSize: 11,
+  padding: '2px 6px',
+  borderRadius: 4,
+  marginLeft: 6,
+  textDecoration: 'none',
+  cursor: 'help',
+  whiteSpace: 'nowrap',
+};
+
 export default function Universe({ data, sectorFilter, onTickerClick }) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('ticker');
   const [sortAsc, setSortAsc] = useState(true);
+
+  const v2MissingTickers = useMemo(() => {
+    const v1 = data?.scores || [];
+    const v2 = data?.fundamental_scores_v2 || [];
+    const v2Set = new Set();
+    for (const r of v2) if (r?.ticker) v2Set.add(r.ticker);
+    const missing = new Set();
+    for (const r of v1) if (r?.ticker && !v2Set.has(r.ticker)) missing.add(r.ticker);
+    return missing;
+  }, [data]);
 
   const rows = useMemo(() => {
     if (!data?.scores) return [];
@@ -88,6 +112,24 @@ export default function Universe({ data, sectorFilter, onTickerClick }) {
             {v || '—'}
           </span>
         );
+      case 'composite_score': {
+        const missing = v2MissingTickers.has(row.ticker);
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <ScoreBadge score={v || 'no_data'} size="sm" />
+            {missing && (
+              <a
+                href="#v2-coverage"
+                title="FMP-safe factor coverage incomplete. See Methodology."
+                onClick={(e) => e.stopPropagation()}
+                style={V2_NA_BADGE_STYLE}
+              >
+                V2 N/A
+              </a>
+            )}
+          </span>
+        );
+      }
       default:
         if (col.type === 'score') return <ScoreBadge score={v || 'no_data'} size="sm" />;
         return v ?? '—';

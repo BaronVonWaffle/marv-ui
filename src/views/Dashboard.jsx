@@ -6,9 +6,11 @@ import SectorSpreadStrip from '../components/SectorSpreadStrip';
 import BriefSummaryLine from '../components/BriefSummaryLine';
 import Notables from '../components/Notables';
 import Movers from '../components/Movers';
-import SectorTag from '../components/SectorTag';
+import CatalystWatch from '../components/CatalystWatch';
+import MorningBriefFull from '../components/MorningBriefFull';
+import SeverityDot from '../components/SeverityDot';
 import { BRAND } from '../utils/colors';
-import { formatDate, formatDateWithYear } from '../utils/format';
+import { formatDate } from '../utils/format';
 
 const mono = "'JetBrains Mono', monospace";
 const sans = 'Arial, sans-serif';
@@ -109,13 +111,17 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
 
   const isStale = Array.isArray(staleTables) && staleTables.length > 0;
 
-  const briefs = useMemo(() => {
-    if (!Array.isArray(data?.morning_briefs)) return [];
-    if (!sectorFilter || sectorFilter === 'all') return data.morning_briefs;
-    return data.morning_briefs.filter(
-      (b) => b.sector?.toLowerCase() === sectorFilter.toLowerCase()
-    );
-  }, [data, sectorFilter]);
+  const macroEvents = useMemo(() => {
+    const rows = data?.economic_calendar || [];
+    if (!rows.length) return [];
+    const today = (data?.snapshot_generated_at || data?.generated_at || '').slice(0, 10)
+      || new Date().toISOString().slice(0, 10);
+    const sorted = [...rows].sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''));
+    const future = sorted.filter((e) => e.event_date >= today);
+    if (future.length >= 5) return future.slice(0, 5);
+    const past = sorted.filter((e) => e.event_date < today).reverse();
+    return [...future, ...past].slice(0, 5);
+  }, [data]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -214,53 +220,55 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
       />
 
       {/* SECTION 7: Catalyst Watch */}
-      {/* C-A.2.3 */}
-      <div style={placeholderCard}>
-        <div style={sectionLabel}>Catalyst Watch</div>
-        <div style={placeholderBody}>Populated in C-A.2.3</div>
-      </div>
+      <CatalystWatch
+        data={data}
+        sectorFilter={sectorFilter}
+        tickerStatus={tickerStatus}
+        onTickerClick={onTickerClick}
+      />
 
       {/* SECTION 8: Macro Calendar */}
-      {/* C-A.2.3 */}
-      <div style={placeholderCard}>
+      <div style={card}>
         <div style={sectionLabel}>Macro Calendar</div>
-        <div style={placeholderBody}>Populated in C-A.2.3</div>
+        {macroEvents.length === 0 ? (
+          <div style={{ fontSize: 11, color: BRAND.textSecondary, fontFamily: sans, padding: '10px 0', textAlign: 'center' }}>
+            No events
+          </div>
+        ) : (
+          macroEvents.map((evt, i) => {
+            const impact = String(evt.impact_level || '').toLowerCase();
+            const sev = impact === 'high' ? 'high' : impact === 'medium' ? 'medium' : 'low';
+            return (
+              <div
+                key={`${evt.event_date}-${evt.event_name}-${i}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '5px 0',
+                  borderBottom: i < macroEvents.length - 1 ? `1px solid ${BRAND.border}` : 'none',
+                }}
+              >
+                <span style={{ fontFamily: mono, fontSize: 10, color: BRAND.textSecondary, minWidth: 48 }}>
+                  {formatDate(evt.event_date)}
+                </span>
+                <SeverityDot severity={sev} />
+                <span style={{ fontFamily: sans, fontSize: 11, color: BRAND.text, flex: 1 }}>
+                  {evt.event_name}
+                </span>
+                {evt.expected_value != null && (
+                  <span style={{ fontFamily: mono, fontSize: 10, color: BRAND.textSecondary }}>
+                    est {String(evt.expected_value)}
+                  </span>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* SECTION 9: Morning Brief (full) */}
-      {/* C-A.2.3 — for now we still render existing sector briefs so the anchor is usable */}
-      <div id="morning-brief-full" style={placeholderCard}>
-        <div style={sectionLabel}>Morning Brief</div>
-        {briefs.length === 0 ? (
-          <div style={placeholderBody}>Populated in C-A.2.3</div>
-        ) : (
-          briefs.map((brief, i) => (
-            <div key={i} style={{ marginBottom: i < briefs.length - 1 ? 12 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                {brief.sector && <SectorTag sector={brief.sector} />}
-                <span style={{ fontFamily: sans, fontSize: 11, fontWeight: 600, color: BRAND.text }}>
-                  {formatDateWithYear(brief.brief_date)}
-                </span>
-              </div>
-              <pre
-                style={{
-                  fontFamily: sans,
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                  color: BRAND.text,
-                  whiteSpace: 'pre-wrap',
-                  margin: 0,
-                  background: BRAND.navyDark,
-                  padding: '8px 10px',
-                  borderRadius: 4,
-                }}
-              >
-                {brief.brief_text}
-              </pre>
-            </div>
-          ))
-        )}
-      </div>
+      <MorningBriefFull data={data} />
     </div>
   );
 }

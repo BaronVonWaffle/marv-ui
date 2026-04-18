@@ -113,7 +113,7 @@ export default function App() {
           <Library data={data} sectorFilter={sectorFilter} />
         )}
         {activeView === 'methodology' && (
-          <Methodology />
+          <Methodology data={data} />
         )}
       </div>
 
