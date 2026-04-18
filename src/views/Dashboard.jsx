@@ -4,6 +4,8 @@ import StatCardSectorTilt from '../components/StatCardSectorTilt';
 import StatCardPlaceholder from '../components/StatCardPlaceholder';
 import SectorSpreadStrip from '../components/SectorSpreadStrip';
 import BriefSummaryLine from '../components/BriefSummaryLine';
+import Notables from '../components/Notables';
+import Movers from '../components/Movers';
 import SectorTag from '../components/SectorTag';
 import { BRAND } from '../utils/colors';
 import { formatDate, formatDateWithYear } from '../utils/format';
@@ -59,9 +61,27 @@ function priorBusinessDay(iso) {
 export default function Dashboard({ data, sectorFilter, onTickerClick }) {
   const currentScores = data?.fundamental_scores_v2 || [];
   const scoreHistory = data?.score_history_v2 || [];
+  const equitySignals = data?.equity_signals || [];
   const issuers = data?.issuers || [];
   const staleTables = data?.stale_tables || [];
+  const tickerStatus = data?.ticker_status || {};
   const snapshotGeneratedAt = data?.snapshot_generated_at || data?.generated_at || null;
+
+  const fundamentalByTicker = useMemo(() => {
+    const out = {};
+    for (const row of currentScores) {
+      if (row?.ticker) out[row.ticker] = row;
+    }
+    return out;
+  }, [currentScores]);
+
+  const equityByTicker = useMemo(() => {
+    const out = {};
+    for (const row of equitySignals) {
+      if (row?.ticker) out[row.ticker] = row;
+    }
+    return out;
+  }, [equitySignals]);
 
   const issuersByTicker = useMemo(() => {
     const out = {};
@@ -175,18 +195,23 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
       <SectorSpreadStrip issuers={issuers} sectorFilter={sectorFilter} />
 
       {/* SECTION 5: Notables */}
-      {/* C-A.2.2 */}
-      <div style={placeholderCard}>
-        <div style={sectionLabel}>Notables</div>
-        <div style={placeholderBody}>Populated in C-A.2.2</div>
-      </div>
+      <Notables
+        data={data}
+        fundamentalByTicker={fundamentalByTicker}
+        historyByTicker={scoreHistoryByTicker}
+        equityByTicker={equityByTicker}
+        tickerStatus={tickerStatus}
+        sectorFilter={sectorFilter}
+        onTickerClick={onTickerClick}
+      />
 
       {/* SECTION 6: Movers */}
-      {/* C-A.2.2 */}
-      <div style={placeholderCard}>
-        <div style={sectionLabel}>Movers</div>
-        <div style={placeholderBody}>Populated in C-A.2.2</div>
-      </div>
+      <Movers
+        data={data}
+        sectorFilter={sectorFilter}
+        tickerStatus={tickerStatus}
+        onTickerClick={onTickerClick}
+      />
 
       {/* SECTION 7: Catalyst Watch */}
       {/* C-A.2.3 */}
