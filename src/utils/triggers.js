@@ -112,7 +112,9 @@ export function evaluateTriggers({
     const priorRow = priorFundamentalRow(historyByTicker[ticker] || [], currentDate, compareMode);
     const priorLabel = priorRow?.fundamental_label || null;
 
-    const trajectory = equityTrajectory(equityByTicker[ticker]);
+    const equityRow = equityByTicker[ticker];
+    const trajectory = equityTrajectory(equityRow);
+    const divLabel = equityRow?.divergence_label;
 
     let spreadZ = null;
     if (schemaMode !== 'disabled' && schemaField) {
@@ -123,6 +125,7 @@ export function evaluateTriggers({
     const triggers = [];
     let severity = 0;
     let flipArrow = null;
+    let divergenceKind = null;
 
     if (priorLabel && priorLabel !== currentLabel) {
       triggers.push('TIER_FLIP');
@@ -130,10 +133,9 @@ export function evaluateTriggers({
       severity += tierFlipSeverity(priorLabel, currentLabel) * 3;
     }
 
-    const divBull = (currentLabel === 'yellow' || currentLabel === 'red') && trajectory === 'Strengthening';
-    const divBear = (currentLabel === 'green' || currentLabel === 'yellow') && trajectory === 'Weakening';
-    if (divBull || divBear) {
+    if (divLabel === 'credit_lags' || divLabel === 'credit_leads') {
       triggers.push('DIVERGENCE');
+      divergenceKind = divLabel;
       severity += 2;
     }
 
@@ -150,6 +152,7 @@ export function evaluateTriggers({
       priorLabel,
       flipArrow,
       trajectory,
+      divergenceKind,
       spreadZ,
       triggers,
       severity,
@@ -169,7 +172,11 @@ export function sortNotables(rows) {
 export function triggerLabel(row) {
   const words = row.triggers.map((t) => {
     if (t === 'TIER_FLIP') return row.flipArrow ? `Tier flip ${row.flipArrow}` : 'Tier flip';
-    if (t === 'DIVERGENCE') return 'Divergence';
+    if (t === 'DIVERGENCE') {
+      if (row.divergenceKind === 'credit_lags') return 'Divergence (credit lags)';
+      if (row.divergenceKind === 'credit_leads') return 'Divergence (credit leads)';
+      return 'Divergence';
+    }
     if (t === 'SPREAD') return 'Spread';
     return t;
   });
