@@ -198,7 +198,7 @@ export default function Dashboard({ data, sectorFilter, onTickerClick }) {
       </div>
 
       {/* SECTION 4: Sector spread strip */}
-      <SectorSpreadStrip issuers={issuers} sectorFilter={sectorFilter} />
+      <SectorSpreadStrip data={data} issuers={issuers} sectorFilter={sectorFilter} />
 
       {/* SECTION 5: Notables */}
       <Notables
