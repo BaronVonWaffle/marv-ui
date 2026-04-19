@@ -23,3 +23,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code workspace
+.claude/
+
+# Local debug / simulation scratch scripts (not part of the app)
+check_*.py
+simulate_*.mjs
