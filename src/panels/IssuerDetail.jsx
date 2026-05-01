@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ScoreBadge from '../components/ScoreBadge';
 import SectorTag from '../components/SectorTag';
 import SeverityDot from '../components/SeverityDot';
+import AnalystTeamBlock from '../components/AnalystTeamBlock';
 import { BRAND, SCORE_COLORS } from '../utils/colors';
 import { formatDate, colorForDev, colorForFund, colorForMaturity } from '../utils/format';
 
@@ -106,6 +107,12 @@ function MiniStat({ label, value }) {
 
 export default function IssuerDetail({ ticker, data, onClose }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // Reset to profile tab whenever the ticker changes — landing on a name
+  // should default to the original quant-pipeline view; analyst digest is
+  // a click-in for names that have it.
+  useEffect(() => { setActiveTab('profile'); }, [ticker]);
 
   if (!ticker || !data) return null;
 
@@ -119,6 +126,14 @@ export default function IssuerDetail({ ticker, data, onClose }) {
   const flags = filterBy(data.equity_flags, ticker);
   const connections = filterBy(data.connection_summary, ticker);
   const catalysts = filterBy(data.catalysts, ticker);
+
+  // Tab gating: "Analyst Digest" tab only appears when the ticker has
+  // analyst-team content (any of the 12 demo names). Non-demo names see
+  // the panel exactly as it was before — single-pane Issuer Profile.
+  const hasAnalystContent = Boolean(
+    data?.has_analyst_team &&
+    data?.analyst_team?.issuer_detail?.[ticker]
+  );
 
   return (
     <>
@@ -222,6 +237,57 @@ export default function IssuerDetail({ ticker, data, onClose }) {
           )}
         </div>
 
+        {/* TAB BAR — only renders when the ticker has analyst-team content.
+            Otherwise the panel looks exactly as it did pre-Phase B.5. */}
+        {hasAnalystContent && (
+          <div
+            style={{
+              display: 'flex',
+              gap: 0,
+              borderBottom: `1px solid ${BRAND.border}`,
+              marginBottom: 12,
+              marginTop: 4,
+            }}
+          >
+            {[
+              { key: 'profile', label: 'Issuer Profile' },
+              { key: 'digest', label: 'Analyst Digest' },
+            ].map((t) => {
+              const active = activeTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: active ? `2px solid ${BRAND.gold}` : '2px solid transparent',
+                    color: active ? BRAND.gold : BRAND.muted,
+                    fontWeight: active ? 600 : 400,
+                    fontFamily: sans,
+                    fontSize: 11,
+                    padding: '7px 14px',
+                    cursor: 'pointer',
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* DIGEST TAB CONTENT */}
+        {hasAnalystContent && activeTab === 'digest' && (
+          <AnalystTeamBlock ticker={ticker} data={data} expanded={expanded} />
+        )}
+
+        {/* PROFILE TAB CONTENT (default; also shown when there is no
+            analyst content for this ticker, so non-demo names render the
+            full original panel without tabs). */}
+        {(!hasAnalystContent || activeTab === 'profile') && (
+        <div>
         {/* SECTION 1: Score Breakdown */}
         <div style={sectionWrap}>
           <div style={sectionHeader}>Score Breakdown</div>
@@ -1000,6 +1066,8 @@ export default function IssuerDetail({ ticker, data, onClose }) {
               </div>
             ))}
           </div>
+        )}
+        </div>
         )}
       </div>
     </>

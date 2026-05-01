@@ -3,6 +3,7 @@ import useData from './hooks/useData';
 import Header from './components/Header';
 import NavTabs from './components/NavTabs';
 import Dashboard from './views/Dashboard';
+import DeskIntelligence from './views/DeskIntelligence';
 import Universe from './views/Universe';
 import Macro from './views/Macro';
 import Alerts from './views/Alerts';
@@ -11,6 +12,7 @@ import Earnings from './views/Earnings';
 import Library from './views/Library';
 import Methodology from './views/Methodology';
 import IssuerDetail from './panels/IssuerDetail';
+import AnalystPanel from './panels/AnalystPanel';
 import { BRAND } from './utils/colors';
 
 const sans = 'Arial, sans-serif';
@@ -20,6 +22,7 @@ export default function App() {
   const [activeView, setActiveView] = useState('dashboard');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [selectedTicker, setSelectedTicker] = useState(null);
+  const [selectedAnalyst, setSelectedAnalyst] = useState(null);
 
   const sectors = useMemo(() => {
     if (!data?.scores) return [];
@@ -92,7 +95,18 @@ export default function App() {
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 13, width: '100%', boxSizing: 'border-box', flex: 1 }}>
         {activeView === 'dashboard' && (
-          <Dashboard data={data} sectorFilter={sectorFilter} onTickerClick={setSelectedTicker} />
+          <Dashboard
+            data={data}
+            sectorFilter={sectorFilter}
+            onTickerClick={setSelectedTicker}
+          />
+        )}
+        {activeView === 'desk_intel' && (
+          <DeskIntelligence
+            data={data}
+            onTickerClick={setSelectedTicker}
+            onAnalystClick={setSelectedAnalyst}
+          />
         )}
         {activeView === 'universe' && (
           <Universe data={data} sectorFilter={sectorFilter} onTickerClick={setSelectedTicker} />
@@ -144,6 +158,19 @@ export default function App() {
           ticker={selectedTicker}
           data={data}
           onClose={() => setSelectedTicker(null)}
+        />
+      )}
+
+      {selectedAnalyst && (
+        <AnalystPanel
+          initials={selectedAnalyst}
+          data={data}
+          onClose={() => setSelectedAnalyst(null)}
+          onTickerClick={(t) => {
+            // Close the analyst panel and open the issuer panel underneath.
+            setSelectedAnalyst(null);
+            setSelectedTicker(t);
+          }}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import { BRAND } from '../utils/colors';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'desk_intel', label: 'Desk Intelligence' },
   { key: 'universe', label: 'Universe' },
   { key: 'macro', label: 'Macro' },
   { key: 'alerts', label: 'Alerts' },
