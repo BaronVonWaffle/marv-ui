@@ -105,8 +105,8 @@ function MiniStat({ label, value }) {
   );
 }
 
-export default function IssuerDetail({ ticker, data, onClose }) {
-  const [expanded, setExpanded] = useState(false);
+export default function IssuerDetail({ ticker, data, onClose, embedded = false }) {
+  const [expanded, setExpanded] = useState(embedded); // embedded mode starts wide
   const [activeTab, setActiveTab] = useState('profile');
 
   // Reset to profile tab whenever the ticker changes — landing on a name
@@ -135,39 +135,57 @@ export default function IssuerDetail({ ticker, data, onClose }) {
     data?.analyst_team?.issuer_detail?.[ticker]
   );
 
+  // Two render modes:
+  //   embedded=true  → page-style; no overlay, no fixed positioning, no slide-over
+  //                    (used by /issuer/:ticker route)
+  //   embedded=false → modal slide-over (default; used when opened from clicks
+  //                    in PMDashboard / other views via selectedTicker state)
+  const panelStyle = embedded
+    ? {
+        background: BRAND.card,
+        border: `1px solid ${BRAND.border}`,
+        borderRadius: 5,
+        fontFamily: sans,
+        padding: '20px 24px',
+        boxSizing: 'border-box',
+        position: 'relative',
+      }
+    : {
+        position: 'fixed',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: expanded ? 'min(900px, 95vw)' : 'min(520px, 90vw)',
+        background: BRAND.card,
+        borderLeft: `2px solid ${BRAND.sage}`,
+        boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+        zIndex: 1000,
+        overflowY: 'auto',
+        fontFamily: sans,
+        padding: '16px 18px',
+        boxSizing: 'border-box',
+        transition: 'width 0.25s ease',
+      };
+
   return (
     <>
-      {/* Overlay */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          zIndex: 999,
-        }}
-      />
+      {/* Overlay — only in modal mode */}
+      {!embedded && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 999,
+          }}
+        />
+      )}
 
       {/* Panel */}
-      <div
-        style={{
-          position: 'fixed',
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: expanded ? 'min(900px, 95vw)' : 'min(520px, 90vw)',
-          background: BRAND.card,
-          borderLeft: `2px solid ${BRAND.sage}`,
-          boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          overflowY: 'auto',
-          fontFamily: sans,
-          padding: '16px 18px',
-          boxSizing: 'border-box',
-          transition: 'width 0.25s ease',
-        }}
-      >
-        {/* Header buttons */}
+      <div style={panelStyle}>
+        {/* Header buttons — modal mode shows expand+close; embedded mode shows only back */}
+        {!embedded ? (
         <div style={{ position: 'absolute', top: 12, right: 14, display: 'flex', gap: 6 }}>
           <button
             onClick={() => setExpanded(!expanded)}
@@ -214,6 +232,32 @@ export default function IssuerDetail({ ticker, data, onClose }) {
             ✕
           </button>
         </div>
+        ) : (
+          // Embedded mode — small "back" affordance only when onClose handler given
+          onClose && (
+            <div style={{ position: 'absolute', top: 14, right: 18 }}>
+              <button
+                onClick={onClose}
+                title="Back"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: BRAND.muted,
+                  cursor: 'pointer',
+                  fontFamily: sans,
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  padding: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = BRAND.gold; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = BRAND.muted; }}
+              >
+                ← Back
+              </button>
+            </div>
+          )
+        )}
 
         {/* HEADER */}
         <div style={{ marginBottom: 14, paddingRight: 24 }}>

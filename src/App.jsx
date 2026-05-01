@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import useData from './hooks/useData';
 import Header from './components/Header';
 import NavTabs from './components/NavTabs';
@@ -12,18 +13,23 @@ import TopIdeas from './views/TopIdeas';
 import Earnings from './views/Earnings';
 import Library from './views/Library';
 import Methodology from './views/Methodology';
-import IssuerDetail from './panels/IssuerDetail';
-import AnalystPanel from './panels/AnalystPanel';
+import IssuerRoute from './views/IssuerRoute';
+import PlaybookRoute from './views/PlaybookRoute';
 import { BRAND } from './utils/colors';
+
+// Lazy: IssuerDetail (1075 LOC) + AnalystPanel (789 LOC) are heavy; keep
+// them out of the initial bundle. They load on first open.
+const IssuerDetail = lazy(() => import('./panels/IssuerDetail'));
+const AnalystPanel = lazy(() => import('./panels/AnalystPanel'));
 
 const sans = 'Arial, sans-serif';
 
 export default function App() {
   const { data, loading, error, tickerStatus } = useData();
-  const [activeView, setActiveView] = useState('pm');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [selectedTicker, setSelectedTicker] = useState(null);
   const [selectedAnalyst, setSelectedAnalyst] = useState(null);
+  const navigate = useNavigate();
 
   const sectors = useMemo(() => {
     if (!data?.scores) return [];
@@ -83,6 +89,11 @@ export default function App() {
     );
   }
 
+  // Modal usage of IssuerDetail (clicks inside views) routes through state.
+  // Routed usage (/issuer/:ticker) goes through IssuerRoute → embedded=true.
+  const onTickerClick = (t) => setSelectedTicker(t);
+  const onAnalystClick = (a) => setSelectedAnalyst(a);
+
   return (
     <div style={{ background: BRAND.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header
@@ -91,53 +102,122 @@ export default function App() {
         onSectorFilterChange={setSectorFilter}
         sectors={sectors}
         generatedAt={data?.generated_at}
+        searchData={data}
       />
-      <NavTabs activeView={activeView} onViewChange={setActiveView} />
+      <NavTabs />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 13, width: '100%', boxSizing: 'border-box', flex: 1 }}>
-        {activeView === 'pm' && (
-          <PMDashboard
-            data={data}
-            tickerStatus={tickerStatus}
-            onTickerClick={setSelectedTicker}
-            onNavigate={setActiveView}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PMDashboard
+                data={data}
+                tickerStatus={tickerStatus}
+                onTickerClick={onTickerClick}
+                onNavigate={(viewKey) => {
+                  // Backwards-compat: PMDashboard passes legacy view keys.
+                  // Map them to routes.
+                  const map = {
+                    desk_intel: '/pod',
+                    topideas: '/top-ideas',
+                    earnings: '/earnings',
+                    universe: '/universe',
+                    macro: '/macro',
+                    alerts: '/alerts',
+                    library: '/library',
+                    methodology: '/methodology',
+                    dashboard: '/legacy',
+                    pm: '/',
+                  };
+                  navigate(map[viewKey] || '/');
+                }}
+              />
+            }
           />
-        )}
-        {activeView === 'dashboard' && (
-          <Dashboard
-            data={data}
-            sectorFilter={sectorFilter}
-            onTickerClick={setSelectedTicker}
+          <Route
+            path="/pod"
+            element={
+              <ThePod
+                data={data}
+                onTickerClick={onTickerClick}
+                onAnalystClick={onAnalystClick}
+              />
+            }
           />
-        )}
-        {activeView === 'desk_intel' && (
-          <ThePod
-            data={data}
-            onTickerClick={setSelectedTicker}
-            onAnalystClick={setSelectedAnalyst}
+          <Route
+            path="/issuer"
+            element={<IssuerRoute data={data} />}
           />
-        )}
-        {activeView === 'universe' && (
-          <Universe data={data} sectorFilter={sectorFilter} onTickerClick={setSelectedTicker} />
-        )}
-        {activeView === 'macro' && (
-          <Macro data={data} sectorFilter={sectorFilter} onTickerClick={setSelectedTicker} />
-        )}
-        {activeView === 'alerts' && (
-          <Alerts data={data} sectorFilter={sectorFilter} onTickerClick={setSelectedTicker} />
-        )}
-        {activeView === 'topideas' && (
-          <TopIdeas data={data} sectorFilter={sectorFilter} />
-        )}
-        {activeView === 'earnings' && (
-          <Earnings data={data} sectorFilter={sectorFilter} />
-        )}
-        {activeView === 'library' && (
-          <Library data={data} sectorFilter={sectorFilter} />
-        )}
-        {activeView === 'methodology' && (
-          <Methodology data={data} />
-        )}
+          <Route
+            path="/issuer/:ticker"
+            element={<IssuerRoute data={data} />}
+          />
+          <Route
+            path="/top-ideas"
+            element={<TopIdeas data={data} sectorFilter={sectorFilter} />}
+          />
+          <Route
+            path="/earnings"
+            element={<Earnings data={data} sectorFilter={sectorFilter} />}
+          />
+          <Route
+            path="/universe"
+            element={<Universe data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
+          />
+          <Route
+            path="/macro"
+            element={<Macro data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
+          />
+          <Route
+            path="/alerts"
+            element={<Alerts data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
+          />
+          <Route
+            path="/library"
+            element={<Library data={data} sectorFilter={sectorFilter} />}
+          />
+          <Route
+            path="/methodology"
+            element={<Methodology data={data} />}
+          />
+          <Route
+            path="/playbook"
+            element={<PlaybookRoute data={data} />}
+          />
+          <Route
+            path="/legacy"
+            element={
+              <Dashboard
+                data={data}
+                sectorFilter={sectorFilter}
+                onTickerClick={onTickerClick}
+              />
+            }
+          />
+          {/* Catch-all: unknown route -> back to PM */}
+          <Route
+            path="*"
+            element={
+              <div style={{ padding: '60px 20px', textAlign: 'center', fontFamily: sans }}>
+                <div style={{ fontSize: 13, color: BRAND.textSecondary }}>
+                  Page not found —{' '}
+                  <button
+                    onClick={() => navigate('/')}
+                    style={{
+                      all: 'unset',
+                      cursor: 'pointer',
+                      color: BRAND.gold,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    return to PM Dashboard
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        </Routes>
       </div>
 
       {/* Footer */}
@@ -162,26 +242,27 @@ export default function App() {
         </span>
       </footer>
 
-      {selectedTicker && (
-        <IssuerDetail
-          ticker={selectedTicker}
-          data={data}
-          onClose={() => setSelectedTicker(null)}
-        />
-      )}
-
-      {selectedAnalyst && (
-        <AnalystPanel
-          initials={selectedAnalyst}
-          data={data}
-          onClose={() => setSelectedAnalyst(null)}
-          onTickerClick={(t) => {
-            // Close the analyst panel and open the issuer panel underneath.
-            setSelectedAnalyst(null);
-            setSelectedTicker(t);
-          }}
-        />
-      )}
+      {/* Modal slide-overs (state-driven; coexist with /issuer/:ticker route) */}
+      <Suspense fallback={null}>
+        {selectedTicker && (
+          <IssuerDetail
+            ticker={selectedTicker}
+            data={data}
+            onClose={() => setSelectedTicker(null)}
+          />
+        )}
+        {selectedAnalyst && (
+          <AnalystPanel
+            initials={selectedAnalyst}
+            data={data}
+            onClose={() => setSelectedAnalyst(null)}
+            onTickerClick={(t) => {
+              setSelectedAnalyst(null);
+              setSelectedTicker(t);
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

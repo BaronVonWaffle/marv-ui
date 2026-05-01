@@ -1,19 +1,30 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { BRAND } from '../utils/colors';
 
 const TABS = [
-  { key: 'pm', label: 'PM' },
-  { key: 'desk_intel', label: 'The Pod' },
-  { key: 'topideas', label: 'Top Ideas' },
-  { key: 'earnings', label: 'Earnings' },
-  { key: 'universe', label: 'Universe' },
-  { key: 'macro', label: 'Macro' },
-  { key: 'alerts', label: 'Alerts' },
-  { key: 'library', label: 'Library' },
-  { key: 'methodology', label: 'Methodology' },
-  { key: 'dashboard', label: 'Legacy' },
+  { path: '/',            label: 'PM' },
+  { path: '/pod',         label: 'The Pod' },
+  { path: '/issuer',      label: 'Issuer',         matchPrefix: '/issuer' },
+  { path: '/top-ideas',   label: 'Top Ideas' },
+  { path: '/earnings',    label: 'Earnings' },
+  { path: '/universe',    label: 'Universe' },
+  { path: '/macro',       label: 'Macro' },
+  { path: '/alerts',      label: 'Alerts' },
+  { path: '/library',     label: 'Library' },
+  { path: '/methodology', label: 'Methodology' },
+  { path: '/legacy',      label: 'Legacy' },
 ];
 
-export default function NavTabs({ activeView, onViewChange }) {
+function isActive(tab, pathname) {
+  if (tab.matchPrefix) return pathname === tab.matchPrefix || pathname.startsWith(tab.matchPrefix + '/');
+  if (tab.path === '/') return pathname === '/';
+  return pathname === tab.path;
+}
+
+export default function NavTabs() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
     <div
       style={{
@@ -25,14 +36,15 @@ export default function NavTabs({ activeView, onViewChange }) {
         margin: '0 auto',
         width: '100%',
         boxSizing: 'border-box',
+        overflowX: 'auto',
       }}
     >
       {TABS.map((tab) => {
-        const active = activeView === tab.key;
+        const active = isActive(tab, location.pathname);
         return (
           <button
-            key={tab.key}
-            onClick={() => onViewChange(tab.key)}
+            key={tab.path}
+            onClick={() => navigate(tab.path)}
             style={{
               background: 'none',
               border: 'none',

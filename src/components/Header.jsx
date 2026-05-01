@@ -1,7 +1,8 @@
 import { BRAND } from '../utils/colors';
 import { formatDateTime } from '../utils/format';
+import IssuerSearchBox from './IssuerSearchBox';
 
-export default function Header({ nameCount, sectorFilter, onSectorFilterChange, sectors, generatedAt }) {
+export default function Header({ nameCount, sectorFilter, onSectorFilterChange, sectors, generatedAt, searchData }) {
   return (
     <>
       <div
@@ -78,8 +79,9 @@ export default function Header({ nameCount, sectorFilter, onSectorFilterChange, 
             </div>
           </div>
 
-          {/* Right: name count + sector filter */}
+          {/* Right: search + name count + sector filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {searchData && <IssuerSearchBox data={searchData} />}
             <span
               style={{
                 color: BRAND.sage,
