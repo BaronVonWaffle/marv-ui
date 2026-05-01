@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import useData from './hooks/useData';
 import Header from './components/Header';
 import NavTabs from './components/NavTabs';
+import PMDashboard from './views/PMDashboard';
 import Dashboard from './views/Dashboard';
-import DeskIntelligence from './views/DeskIntelligence';
+import ThePod from './views/ThePod';
 import Universe from './views/Universe';
 import Macro from './views/Macro';
 import Alerts from './views/Alerts';
@@ -18,8 +19,8 @@ import { BRAND } from './utils/colors';
 const sans = 'Arial, sans-serif';
 
 export default function App() {
-  const { data, loading, error } = useData();
-  const [activeView, setActiveView] = useState('dashboard');
+  const { data, loading, error, tickerStatus } = useData();
+  const [activeView, setActiveView] = useState('pm');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [selectedTicker, setSelectedTicker] = useState(null);
   const [selectedAnalyst, setSelectedAnalyst] = useState(null);
@@ -94,6 +95,14 @@ export default function App() {
       <NavTabs activeView={activeView} onViewChange={setActiveView} />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 13, width: '100%', boxSizing: 'border-box', flex: 1 }}>
+        {activeView === 'pm' && (
+          <PMDashboard
+            data={data}
+            tickerStatus={tickerStatus}
+            onTickerClick={setSelectedTicker}
+            onNavigate={setActiveView}
+          />
+        )}
         {activeView === 'dashboard' && (
           <Dashboard
             data={data}
@@ -102,7 +111,7 @@ export default function App() {
           />
         )}
         {activeView === 'desk_intel' && (
-          <DeskIntelligence
+          <ThePod
             data={data}
             onTickerClick={setSelectedTicker}
             onAnalystClick={setSelectedAnalyst}

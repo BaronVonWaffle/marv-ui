@@ -166,9 +166,15 @@ function FeedRow({ entry, onTickerClick }) {
   );
 }
 
-export default function ActivityFeed({ data, onTickerClick }) {
-  const entries = data?.analyst_team?.activity_feed;
-  if (!Array.isArray(entries) || entries.length === 0) return null;
+export default function ActivityFeed({ data, onTickerClick, limit, maxHeight = 400 }) {
+  const fullEntries = data?.analyst_team?.activity_feed;
+  if (!Array.isArray(fullEntries) || fullEntries.length === 0) return null;
+
+  // `limit` is honored when provided (used by PM Dashboard to show just the
+  // top N entries). When undefined, the full feed renders inside a scroll
+  // region — original Wave 4 behavior.
+  const entries = limit ? fullEntries.slice(0, limit) : fullEntries;
+  const isCapped = limit && fullEntries.length > limit;
 
   return (
     <div>
@@ -183,7 +189,7 @@ export default function ActivityFeed({ data, onTickerClick }) {
             textTransform: 'none',
           }}
         >
-          ({entries.length} entries)
+          ({isCapped ? `latest ${limit} of ${fullEntries.length}` : `${fullEntries.length} entries`})
         </span>
       </div>
       <div
@@ -192,8 +198,8 @@ export default function ActivityFeed({ data, onTickerClick }) {
           border: `1px solid ${BRAND.border}`,
           borderRadius: 5,
           padding: '4px 14px',
-          maxHeight: 400,
-          overflowY: 'auto',
+          maxHeight: limit ? undefined : maxHeight,
+          overflowY: limit ? undefined : 'auto',
         }}
       >
         {entries.map((e) => (

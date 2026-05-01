@@ -1,15 +1,16 @@
 import { BRAND } from '../utils/colors';
 
 const TABS = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'desk_intel', label: 'Desk Intelligence' },
+  { key: 'pm', label: 'PM' },
+  { key: 'desk_intel', label: 'The Pod' },
+  { key: 'topideas', label: 'Top Ideas' },
+  { key: 'earnings', label: 'Earnings' },
   { key: 'universe', label: 'Universe' },
   { key: 'macro', label: 'Macro' },
   { key: 'alerts', label: 'Alerts' },
-  { key: 'topideas', label: 'Top Ideas' },
-  { key: 'earnings', label: 'Earnings' },
   { key: 'library', label: 'Library' },
   { key: 'methodology', label: 'Methodology' },
+  { key: 'dashboard', label: 'Legacy' },
 ];
 
 export default function NavTabs({ activeView, onViewChange }) {

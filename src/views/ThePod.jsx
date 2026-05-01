@@ -17,7 +17,7 @@ const mono = "'JetBrains Mono', monospace";
 //   3. Today's Activity Feed (timestamped log of all analyst actions)
 //   4. [Phase B.4] T.W. House View — regime + drivers + catalysts
 
-export default function DeskIntelligence({ data, onTickerClick, onAnalystClick }) {
+export default function ThePod({ data, onTickerClick, onAnalystClick }) {
   const hasTeam = Boolean(data?.has_analyst_team);
 
   if (!hasTeam) {
