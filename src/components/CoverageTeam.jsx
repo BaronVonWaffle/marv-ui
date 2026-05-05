@@ -13,6 +13,22 @@ const sectionLabel = {
   marginBottom: 6,
 };
 
+// Wave 6: top-trade action → glyph + color. Glyph rendered next to ticker
+// so the desk can scan direction without reading.
+const ACTION_GLYPH = {
+  add: { symbol: '+', color: SCORE_COLORS.green },
+  trim: { symbol: '−', color: SCORE_COLORS.red },
+  watch: { symbol: '·', color: BRAND.gold },
+  avoid: { symbol: '×', color: SCORE_COLORS.red },
+};
+
+function actionGlyph(action) {
+  return ACTION_GLYPH[String(action || '').toLowerCase()] || {
+    symbol: '·',
+    color: BRAND.muted,
+  };
+}
+
 // Sector-call direction → pill color.
 // Green: positive / overweight / long
 // Yellow: neutral
@@ -57,7 +73,7 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n).trimEnd() + '…' : s;
 }
 
-function AnalystCard({ analyst, onClick, houseView }) {
+function AnalystCard({ analyst, onClick, onTickerClick, houseView, topTrades }) {
   const {
     initials,
     sector,
@@ -67,6 +83,10 @@ function AnalystCard({ analyst, onClick, houseView }) {
     sector_call_thesis_md,
     track_record_summary,
   } = analyst;
+
+  // Wave 6: top trades for this analyst. Capped at 5 for visual scan;
+  // full active set lives in AnalystPanel Pitch tab.
+  const trades = Array.isArray(topTrades) ? topTrades.slice(0, 5) : [];
 
   const tr = track_record_summary || {};
   const total = tr.total_calls ?? 0;
@@ -228,6 +248,82 @@ function AnalystCard({ analyst, onClick, houseView }) {
         </div>
       )}
 
+      {/* Wave 6: top trades preview row (max 5). T.W. has no top trades
+          — Macro Strategist doesn't pick names. */}
+      {!isTW && (
+        <div
+          style={{
+            borderTop: `1px solid ${BRAND.border}`,
+            paddingTop: 7,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: sans,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 0.7,
+              textTransform: 'uppercase',
+              color: BRAND.muted,
+            }}
+          >
+            Top trades
+          </div>
+          {trades.length > 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                fontFamily: mono,
+                fontSize: 11,
+              }}
+            >
+              {trades.map((t) => {
+                const g = actionGlyph(t.action);
+                return (
+                  <button
+                    key={`${t.ticker}-${t.action}`}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTickerClick?.(t.ticker);
+                    }}
+                    title={t.thesis_one_liner || ''}
+                    style={{
+                      all: 'unset',
+                      cursor: 'pointer',
+                      color: BRAND.text,
+                      borderBottom: `1px dotted ${BRAND.border}`,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    <span>{t.ticker}</span>{' '}
+                    <span style={{ color: g.color, fontWeight: 700 }}>
+                      ({g.symbol})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              style={{
+                fontFamily: sans,
+                fontSize: 10,
+                color: BRAND.muted,
+                fontStyle: 'italic',
+              }}
+            >
+              none active
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Track record summary footer */}
       <div
         style={{
@@ -255,10 +351,74 @@ function AnalystCard({ analyst, onClick, houseView }) {
   );
 }
 
-export default function CoverageTeam({ data, onAnalystClick }) {
+export default function CoverageTeam({
+  data,
+  onAnalystClick,
+  onTickerClick,
+  sortBy = 'sector',
+  filterPosition = 'all',
+}) {
   const team = data?.analyst_team?.coverage_team;
   if (!Array.isArray(team) || team.length === 0) return null;
   const houseView = data?.analyst_team?.house_view;
+  const topTradesByAnalyst = data?.analyst_team?.top_trades_by_analyst || {};
+
+  // Build a position lookup: analyst initials → cross_currents position
+  // ('concur' | 'dissent' | 'watching' | undefined). Used by the
+  // ThePod filter chip.
+  const positions = data?.analyst_team?.cross_currents?.positions || [];
+  const positionByAnalyst = {};
+  positions.forEach((p) => {
+    if (p.analyst) positionByAnalyst[p.analyst] = p.position;
+  });
+
+  // Apply filter first, then sort. Both are pure derivations from props
+  // — no state inside this component.
+  let filtered = team;
+  if (filterPosition && filterPosition !== 'all') {
+    filtered = team.filter(
+      (a) => positionByAnalyst[a.initials] === filterPosition
+    );
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'sector') {
+      return (a.sector || '').localeCompare(b.sector || '');
+    }
+    if (sortBy === 'hit_rate') {
+      const ar = a.track_record_summary?.hit_rate_pct ?? -1;
+      const br = b.track_record_summary?.hit_rate_pct ?? -1;
+      return br - ar; // desc
+    }
+    if (sortBy === 'top_trades') {
+      const an = (topTradesByAnalyst[a.initials] || []).length;
+      const bn = (topTradesByAnalyst[b.initials] || []).length;
+      return bn - an; // desc
+    }
+    // 'recent' — most recent shift first; nulls last
+    const at = a.last_shift_timestamp || '';
+    const bt = b.last_shift_timestamp || '';
+    return bt.localeCompare(at);
+  });
+
+  if (sorted.length === 0) {
+    return (
+      <div>
+        <div style={sectionLabel}>Coverage Team</div>
+        <div
+          style={{
+            fontFamily: sans,
+            fontSize: 11,
+            color: BRAND.muted,
+            fontStyle: 'italic',
+            padding: '8px 0',
+          }}
+        >
+          No analysts match this filter.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -270,12 +430,14 @@ export default function CoverageTeam({ data, onAnalystClick }) {
           gap: 8,
         }}
       >
-        {team.map((a) => (
+        {sorted.map((a) => (
           <AnalystCard
             key={a.initials}
             analyst={a}
             onClick={onAnalystClick}
+            onTickerClick={onTickerClick}
             houseView={houseView}
+            topTrades={topTradesByAnalyst[a.initials]}
           />
         ))}
       </div>

@@ -105,6 +105,364 @@ function MiniStat({ label, value }) {
   );
 }
 
+// Wave 6: Fundamental Score (v2) block. Renders the composite + 5-bucket
+// breakdown + score_momentum trajectory when scoreV2 is present. Empty
+// state surfaces the engine-migration gap explicitly (Wave 7 candidate)
+// rather than silently hiding — the gap is itself a useful signal to the
+// desk.
+const V2_LABEL_COLOR = {
+  green: SCORE_COLORS.green,
+  yellow: SCORE_COLORS.yellow,
+  red: SCORE_COLORS.red,
+};
+
+const V2_BUCKETS = [
+  { key: 'bucket_leverage',      label: 'Leverage' },
+  { key: 'bucket_market_risk',   label: 'Market risk' },
+  { key: 'bucket_cash_flow',     label: 'Cash flow' },
+  { key: 'bucket_profitability', label: 'Profitability' },
+  { key: 'bucket_default_risk',  label: 'Default risk' },
+];
+
+function bucketColor(val) {
+  if (val == null) return BRAND.muted;
+  // Buckets are 0-10ish in the v2 engine; >=7 green, 4-7 yellow, <4 red.
+  if (val >= 7) return SCORE_COLORS.green;
+  if (val >= 4) return SCORE_COLORS.yellow;
+  return SCORE_COLORS.red;
+}
+
+function FundamentalScoreV2Block({ scoreV2, momentum }) {
+  if (!scoreV2) {
+    return (
+      <div style={sectionWrap}>
+        <div style={sectionHeader}>Fundamental Score (v2)</div>
+        <div
+          style={{
+            padding: '8px 10px',
+            background: BRAND.altRow,
+            borderRadius: 4,
+            fontFamily: sans,
+            fontSize: 10.5,
+            color: BRAND.muted,
+            lineHeight: 1.5,
+          }}
+        >
+          Fundamental scoring v2 unavailable for this issuer — engine
+          migration to xbrl_financials pending (Wave 7). Showing v1
+          scores below.
+        </div>
+      </div>
+    );
+  }
+  const label = scoreV2.fundamental_label || 'no_data';
+  const labelColor = V2_LABEL_COLOR[label.toLowerCase()] || BRAND.muted;
+  return (
+    <div style={sectionWrap}>
+      <div
+        style={{
+          ...sectionHeader,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+        }}
+      >
+        <span>Fundamental Score (v2)</span>
+        <span
+          style={{
+            fontFamily: sans,
+            fontSize: 9,
+            color: BRAND.muted,
+            textTransform: 'uppercase',
+            letterSpacing: 0.6,
+          }}
+        >
+          {scoreV2.peer_group || scoreV2.sector || ''}
+        </span>
+      </div>
+
+      {/* Composite + label */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 14,
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: mono,
+            fontSize: 22,
+            fontWeight: 700,
+            color: BRAND.text,
+            lineHeight: 1,
+          }}
+        >
+          {typeof scoreV2.fundamental_score === 'number'
+            ? scoreV2.fundamental_score.toFixed(1)
+            : '—'}
+        </div>
+        <span
+          style={{
+            display: 'inline-block',
+            fontFamily: sans,
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: 0.7,
+            textTransform: 'uppercase',
+            color: BRAND.card,
+            background: labelColor,
+            padding: '3px 9px',
+            borderRadius: 3,
+          }}
+        >
+          {label}
+        </span>
+      </div>
+
+      {/* 5-bucket breakdown */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: 6,
+          marginBottom: momentum ? 10 : 0,
+        }}
+      >
+        {V2_BUCKETS.map((b) => {
+          const val = scoreV2[b.key];
+          const dotColor = bucketColor(val);
+          return (
+            <div
+              key={b.key}
+              style={{
+                background: BRAND.altRow,
+                padding: '6px 4px',
+                borderRadius: 3,
+                textAlign: 'center',
+              }}
+              title={`${b.label}: ${val == null ? 'no data' : val}`}
+            >
+              <div
+                style={{
+                  fontSize: 8,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  color: BRAND.muted,
+                  fontWeight: 600,
+                  marginBottom: 4,
+                }}
+              >
+                {b.label}
+              </div>
+              <div
+                style={{
+                  fontFamily: mono,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: dotColor,
+                }}
+              >
+                {val == null ? '—' : Number(val).toFixed(1)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Score momentum trajectory */}
+      {momentum && (
+        <div
+          style={{
+            background: BRAND.altRow,
+            borderRadius: 3,
+            padding: '6px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 8,
+              textTransform: 'uppercase',
+              letterSpacing: 0.7,
+              color: BRAND.muted,
+              fontWeight: 700,
+            }}
+          >
+            Momentum (30d / 90d / 180d)
+          </div>
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: 11,
+              color: BRAND.text,
+              display: 'flex',
+              gap: 12,
+            }}
+          >
+            <span>Δ {formatDelta(momentum.score_delta_30d)}</span>
+            <span>Δ {formatDelta(momentum.score_delta_90d)}</span>
+            <span>Δ {formatDelta(momentum.score_delta_180d)}</span>
+          </div>
+          {momentum.narrative_snippet && (
+            <div
+              style={{
+                fontFamily: sans,
+                fontSize: 10.5,
+                color: BRAND.textSecondary,
+                lineHeight: 1.4,
+                marginTop: 2,
+              }}
+            >
+              {momentum.narrative_snippet}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDelta(v) {
+  if (v == null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return '—';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${n.toFixed(1)}`;
+}
+
+// Wave 6: Coverage memo block. Renders the analyst's deep-dive memo
+// body with status pill + initiated/refreshed dates. Memo body is
+// collapsed by default (1k+ words is too long to scan) — click to expand.
+const MEMO_STATUS_COLOR = {
+  initiated: SCORE_COLORS.green,
+  refreshed: '#5294d0',
+  refresh_due: SCORE_COLORS.yellow,
+  stale: SCORE_COLORS.red,
+  queued: BRAND.muted,
+};
+
+function CoverageMemoBlock({ memo }) {
+  const [open, setOpen] = useState(false);
+  if (!memo) return null;
+  const status = memo.memo_status || 'unknown';
+  const statusColor = MEMO_STATUS_COLOR[status] || BRAND.muted;
+  const wordCount = memo.memo_md
+    ? memo.memo_md.trim().split(/\s+/).length
+    : 0;
+  return (
+    <div style={sectionWrap}>
+      <div
+        style={{
+          ...sectionHeader,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginBottom: 6,
+        }}
+      >
+        <span>
+          Memo —{' '}
+          <span style={{ color: BRAND.muted, fontWeight: 400 }}>
+            initiated {memo.initiated_date || '—'} by {memo.analyst_initials || '—'}
+          </span>
+        </span>
+        <span
+          style={{
+            display: 'inline-block',
+            fontFamily: sans,
+            fontSize: 9,
+            fontWeight: 700,
+            color: BRAND.card,
+            background: statusColor,
+            textTransform: 'uppercase',
+            letterSpacing: 0.7,
+            padding: '2px 8px',
+            borderRadius: 3,
+          }}
+        >
+          {status.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <div
+        style={{
+          fontFamily: sans,
+          fontSize: 10,
+          color: BRAND.muted,
+          marginBottom: 8,
+        }}
+      >
+        Last refreshed {memo.last_refreshed_date || '—'} ·{' '}
+        {memo.quarters_covered || 'no quarters listed'}
+        {wordCount > 0 ? ` · ${wordCount.toLocaleString()} words` : ''}
+      </div>
+      {memo.memo_md ? (
+        open ? (
+          <div
+            style={{
+              fontFamily: sans,
+              fontSize: 11.5,
+              color: BRAND.text,
+              lineHeight: 1.6,
+              background: BRAND.altRow,
+              borderRadius: 4,
+              padding: '12px 14px',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {memo.memo_md}
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  fontFamily: sans,
+                  fontSize: 10,
+                  color: BRAND.gold,
+                  textDecoration: 'underline',
+                }}
+              >
+                Collapse memo
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              fontFamily: sans,
+              fontSize: 11,
+              color: BRAND.gold,
+              textDecoration: 'underline',
+            }}
+          >
+            Read full memo ({wordCount.toLocaleString()} words)
+          </button>
+        )
+      ) : (
+        <div
+          style={{
+            fontFamily: sans,
+            fontSize: 10.5,
+            color: BRAND.muted,
+            fontStyle: 'italic',
+          }}
+        >
+          Memo body not available in snapshot.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function IssuerDetail({ ticker, data, onClose, embedded = false }) {
   const [expanded, setExpanded] = useState(embedded); // embedded mode starts wide
   const [activeTab, setActiveTab] = useState('profile');
@@ -126,6 +484,13 @@ export default function IssuerDetail({ ticker, data, onClose, embedded = false }
   const flags = filterBy(data.equity_flags, ticker);
   const connections = filterBy(data.connection_summary, ticker);
   const catalysts = filterBy(data.catalysts, ticker);
+
+  // Wave 6: fundamental_scores_v2 lookup. Engine still reads stale
+  // fmp_financials so coverage is ~24%; many tickers will have no row.
+  // Render gracefully — the empty state is itself a signal to the user
+  // that Wave 7 (xbrl_financials migration) is the queued fix.
+  const scoreV2 = find(data.fundamental_scores_v2, ticker);
+  const momentum = find(data.score_momentum, ticker);
 
   // Tab gating: "Analyst Digest" tab only appears when the ticker has
   // analyst-team content (any of the 12 demo names). Non-demo names see
@@ -324,7 +689,17 @@ export default function IssuerDetail({ ticker, data, onClose, embedded = false }
 
         {/* DIGEST TAB CONTENT */}
         {hasAnalystContent && activeTab === 'digest' && (
-          <AnalystTeamBlock ticker={ticker} data={data} expanded={expanded} />
+          <>
+            {/* WAVE 6: MEMO block — sits above the existing issuer_detail
+                section blocks. Renders coverage_memos.memo_md with status
+                pill + last refresh date. Hidden if no memo on file for
+                this ticker (most names — the targeted memo program is
+                ~50/quarter per CLAUDE.md). */}
+            <CoverageMemoBlock
+              memo={find(data.coverage_memos, ticker)}
+            />
+            <AnalystTeamBlock ticker={ticker} data={data} expanded={expanded} />
+          </>
         )}
 
         {/* PROFILE TAB CONTENT (default; also shown when there is no
@@ -332,6 +707,14 @@ export default function IssuerDetail({ ticker, data, onClose, embedded = false }
             full original panel without tabs). */}
         {(!hasAnalystContent || activeTab === 'profile') && (
         <div>
+        {/* WAVE 6: FUNDAMENTAL SCORE (v2) — composite + 5-bucket breakdown
+            with score_momentum trajectory. Renders an empty state for
+            issuers without v2 data (currently ~76% of universe — engine
+            migration to xbrl_financials is queued as Wave 7). The empty
+            state is intentional: it makes the data gap visible to the
+            desk rather than silently falling back to v1. */}
+        <FundamentalScoreV2Block scoreV2={scoreV2} momentum={momentum} />
+
         {/* SECTION 1: Score Breakdown */}
         <div style={sectionWrap}>
           <div style={sectionHeader}>Score Breakdown</div>
