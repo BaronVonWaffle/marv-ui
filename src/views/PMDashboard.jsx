@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import AlphaWatchlistPanel from '../components/AlphaWatchlistPanel';
 import HouseView from '../components/HouseView';
 import CrossCurrentsMini from '../components/CrossCurrentsMini';
 import ActivityFeed from '../components/ActivityFeed';
 import CatalystWatch from '../components/CatalystWatch';
 import QuantBriefPanel from '../components/QuantBriefPanel';
 import TriageTop5Panel from '../components/TriageTop5Panel';
-import TopIdeasTop5Panel from '../components/TopIdeasTop5Panel';
 import EarningsTodayPanel from '../components/EarningsTodayPanel';
 import MorningBriefFull from '../components/MorningBriefFull';
 import { BRAND } from '../utils/colors';
@@ -48,7 +48,12 @@ export default function PMDashboard({ data, tickerStatus, onTickerClick, onNavig
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 4 }}>
-      {/* Hero — House View as full-width regime statement */}
+      {/* Hero — Alpha Watchlist (Wave 9, 2026-05-14): 5 names with composed
+         tags. THIS is the first thing the PM should see; everything below it
+         is supporting context. */}
+      <AlphaWatchlistPanel data={data} onTickerClick={onTickerClick} />
+
+      {/* Regime — T.W.'s House View as full-width statement */}
       <HouseView data={data} />
 
       {/* Two-column layout — flow (context) vs action (what to do today) */}
@@ -74,7 +79,6 @@ export default function PMDashboard({ data, tickerStatus, onTickerClick, onNavig
 
         {/* RIGHT RAIL — ACTION (what to do) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <TopIdeasTop5Panel data={data} onTickerClick={onTickerClick} />
           <TriageTop5Panel data={data} onTickerClick={onTickerClick} />
           <div>
             <div style={sectionLabel}>Today's Catalysts</div>

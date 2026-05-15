@@ -1,18 +1,17 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BRAND } from '../utils/colors';
 
+// Wave 9 (2026-05-14): tab count 11 → 6.
+// Removed: /legacy (Dashboard.jsx — Wave 6 replaced it), /top-ideas (folded
+// into Alpha Watchlist on PM Dashboard), /library + /methodology (demoted to
+// footer link). Merged /macro + /alerts into /tape.
 const TABS = [
-  { path: '/',            label: 'PM' },
-  { path: '/pod',         label: 'The Pod' },
-  { path: '/issuer',      label: 'Issuer',         matchPrefix: '/issuer' },
-  { path: '/top-ideas',   label: 'Top Ideas' },
-  { path: '/earnings',    label: 'Earnings' },
-  { path: '/universe',    label: 'Universe' },
-  { path: '/macro',       label: 'Macro' },
-  { path: '/alerts',      label: 'Alerts' },
-  { path: '/library',     label: 'Library' },
-  { path: '/methodology', label: 'Methodology' },
-  { path: '/legacy',      label: 'Legacy' },
+  { path: '/',         label: 'PM' },
+  { path: '/pod',      label: 'The Pod' },
+  { path: '/issuer',   label: 'Issuer',   matchPrefix: '/issuer' },
+  { path: '/universe', label: 'Universe' },
+  { path: '/tape',     label: 'Tape' },
+  { path: '/earnings', label: 'Earnings' },
 ];
 
 function isActive(tab, pathname) {

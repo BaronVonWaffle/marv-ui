@@ -4,12 +4,9 @@ import useData from './hooks/useData';
 import Header from './components/Header';
 import NavTabs from './components/NavTabs';
 import PMDashboard from './views/PMDashboard';
-import Dashboard from './views/Dashboard';
 import ThePod from './views/ThePod';
 import Universe from './views/Universe';
-import Macro from './views/Macro';
-import Alerts from './views/Alerts';
-import TopIdeas from './views/TopIdeas';
+import Tape from './views/Tape';
 import Earnings from './views/Earnings';
 import Library from './views/Library';
 import Methodology from './views/Methodology';
@@ -28,6 +25,7 @@ export default function App() {
   const { data, loading, error, tickerStatus } = useData();
   const [sectorFilter, setSectorFilter] = useState('all');
   const [selectedTicker, setSelectedTicker] = useState(null);
+  const [highlightTag, setHighlightTag] = useState(null);
   const [selectedAnalyst, setSelectedAnalyst] = useState(null);
   const navigate = useNavigate();
 
@@ -91,7 +89,12 @@ export default function App() {
 
   // Modal usage of IssuerDetail (clicks inside views) routes through state.
   // Routed usage (/issuer/:ticker) goes through IssuerRoute → embedded=true.
-  const onTickerClick = (t) => setSelectedTicker(t);
+  // Wave 9 (2026-05-14): callers may pass {highlight: <tag>} to focus a
+  // specific evidence section in IssuerDetail (used by AlphaWatchlistPanel).
+  const onTickerClick = (t, opts) => {
+    setSelectedTicker(t);
+    setHighlightTag(opts?.highlight || null);
+  };
   const onAnalystClick = (a) => setSelectedAnalyst(a);
 
   return (
@@ -116,18 +119,19 @@ export default function App() {
                 tickerStatus={tickerStatus}
                 onTickerClick={onTickerClick}
                 onNavigate={(viewKey) => {
-                  // Backwards-compat: PMDashboard passes legacy view keys.
-                  // Map them to routes.
+                  // Map legacy view keys to current routes. /top-ideas and
+                  // /legacy retired in Wave 9 — redirect to PM Dashboard.
+                  // /macro and /alerts merged into /tape.
                   const map = {
                     desk_intel: '/pod',
-                    topideas: '/top-ideas',
+                    topideas: '/',
                     earnings: '/earnings',
                     universe: '/universe',
-                    macro: '/macro',
-                    alerts: '/alerts',
+                    macro: '/tape',
+                    alerts: '/tape',
                     library: '/library',
                     methodology: '/methodology',
-                    dashboard: '/legacy',
+                    dashboard: '/',
                     pm: '/',
                   };
                   navigate(map[viewKey] || '/');
@@ -154,25 +158,19 @@ export default function App() {
             element={<IssuerRoute data={data} />}
           />
           <Route
-            path="/top-ideas"
-            element={<TopIdeas data={data} sectorFilter={sectorFilter} />}
-          />
-          <Route
             path="/earnings"
-            element={<Earnings data={data} sectorFilter={sectorFilter} />}
+            element={<Earnings data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
           />
           <Route
             path="/universe"
             element={<Universe data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
           />
           <Route
-            path="/macro"
-            element={<Macro data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
+            path="/tape"
+            element={<Tape data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
           />
-          <Route
-            path="/alerts"
-            element={<Alerts data={data} sectorFilter={sectorFilter} onTickerClick={onTickerClick} />}
-          />
+          {/* Library + Methodology demoted in Wave 9 — not in NavTabs but
+              still routable from the footer "About" link. */}
           <Route
             path="/library"
             element={<Library data={data} sectorFilter={sectorFilter} />}
@@ -185,16 +183,7 @@ export default function App() {
             path="/playbook"
             element={<PlaybookRoute data={data} />}
           />
-          <Route
-            path="/legacy"
-            element={
-              <Dashboard
-                data={data}
-                sectorFilter={sectorFilter}
-                onTickerClick={onTickerClick}
-              />
-            }
-          />
+          {/* /top-ideas, /macro, /alerts, /legacy retired Wave 9 — fall through to catch-all. */}
           {/* Catch-all: unknown route -> back to PM */}
           <Route
             path="*"
@@ -248,7 +237,11 @@ export default function App() {
           <IssuerDetail
             ticker={selectedTicker}
             data={data}
-            onClose={() => setSelectedTicker(null)}
+            highlight={highlightTag}
+            onClose={() => {
+              setSelectedTicker(null);
+              setHighlightTag(null);
+            }}
           />
         )}
         {selectedAnalyst && (

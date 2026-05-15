@@ -53,14 +53,12 @@ export default function useData() {
   }, []);
 
   // v2 table lookups — memoized so referential identity is stable across renders.
+  // Wave 9 (2026-05-14): dropped spreadData + relativeValue (H0A0 chain retired,
+  // tables don't exist in DB anymore).
   const fundamentalScoresV2 = useMemo(
     () => indexByTicker(data?.fundamental_scores_v2), [data]);
   const equitySignals = useMemo(
     () => indexByTicker(data?.equity_signals), [data]);
-  const spreadData = useMemo(
-    () => indexByTicker(data?.spread_data), [data]);
-  const relativeValue = useMemo(
-    () => indexByTicker(data?.relative_value), [data]);
   const scoreHistoryV2 = useMemo(
     () => groupByTicker(data?.score_history_v2), [data]);
   const scoreMomentum = useMemo(
@@ -82,17 +80,14 @@ export default function useData() {
     // v2 table lookups
     fundamentalScoresV2,
     equitySignals,
-    spreadData,
-    relativeValue,
     scoreHistoryV2,
     scoreMomentum,
     tickerStatus,
     // metadata
     snapshotGeneratedAt: data?.snapshot_generated_at || data?.generated_at || null,
     v2TablesIncluded: data?.v2_tables_included || [],
-    spreadDataAsOf: data?.spread_data_as_of || null,
-    spreadDataAgeDays: data?.spread_data_age_days ?? null,
     scoreMomentumAsOf: data?.score_momentum_as_of || null,
+    alphaWatchlistAsOf: data?.alpha_watchlist_as_of || null,
     snapshotIncludesStaleWarning: !!data?.snapshot_includes_stale_warning,
     staleTables: data?.stale_tables || [],
     // helpers

@@ -463,7 +463,34 @@ function CoverageMemoBlock({ memo }) {
   );
 }
 
-export default function IssuerDetail({ ticker, data, onClose, embedded = false }) {
+// Wave 9 (2026-05-14): Alpha Watchlist tag taxonomy for the highlight banner
+// shown at the top of IssuerDetail when opened from an AlphaWatchlistPanel
+// click. Keeps the user oriented — "I clicked because of THIS tag."
+const ALPHA_TAG_LABEL = {
+  EQ_CREDIT_GAP:      'Equity-credit divergence',
+  LEVERAGE_BREAK:     'Leverage break',
+  RISK_REVERSAL:      'Equity reversal — bond may follow',
+  VOL_REGIME_SHIFT:   'Volatility regime shift',
+  TEAM_CONVERGENCE:   'Team consensus',
+  CONTRARIAN_DISSENT: 'Contrarian analyst dissent',
+  FRESH_FILE:         'Fresh 10-Q/10-K; memo stale',
+  POST_PRINT_DRIFT:   'Post-earnings drift',
+  CATALYST_IMMINENT:  'Catalyst within 5 trading days',
+  SCORE_BREAK:        'Fundamental score tier moved',
+};
+
+function alphaEvidenceFor(data, ticker, tag) {
+  if (!tag) return null;
+  const row = (data?.alpha_watchlist_today || []).find((r) => r.ticker === ticker);
+  if (!row) return null;
+  let ev = row.tag_evidence;
+  if (typeof ev === 'string') {
+    try { ev = JSON.parse(ev); } catch { ev = {}; }
+  }
+  return ev?.[tag] || null;
+}
+
+export default function IssuerDetail({ ticker, data, onClose, embedded = false, highlight = null }) {
   const [expanded, setExpanded] = useState(embedded); // embedded mode starts wide
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -473,6 +500,11 @@ export default function IssuerDetail({ ticker, data, onClose, embedded = false }
   useEffect(() => { setActiveTab('profile'); }, [ticker]);
 
   if (!ticker || !data) return null;
+
+  // Wave 9: if opened from AlphaWatchlistPanel with ?highlight=<tag>, render
+  // a one-line banner showing why this name surfaced.
+  const highlightLabel = highlight ? ALPHA_TAG_LABEL[highlight] : null;
+  const highlightEvidence = highlight ? alphaEvidenceFor(data, ticker, highlight) : null;
 
   const score = find(data.scores, ticker) || {};
   const debtEv = find(data.debt_ev, ticker);
@@ -645,6 +677,43 @@ export default function IssuerDetail({ ticker, data, onClose, embedded = false }
             </div>
           )}
         </div>
+
+        {/* Wave 9 Alpha Watchlist highlight — shown only when opened via
+            AlphaWatchlistPanel click with a specific tag focus. */}
+        {highlight && highlightLabel && (
+          <div
+            style={{
+              background: `${BRAND.gold}14`, /* gold @ 8% alpha */
+              border: `1px solid ${BRAND.gold}`,
+              borderRadius: 4,
+              padding: '8px 12px',
+              marginBottom: 12,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+            }}
+          >
+            <span style={{
+              fontFamily: sans,
+              fontSize: 9,
+              fontWeight: 700,
+              color: BRAND.gold,
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+            }}>
+              From Alpha Watchlist · {highlightLabel}
+            </span>
+            {highlightEvidence && (
+              <span style={{
+                fontFamily: mono,
+                fontSize: 11,
+                color: BRAND.text,
+              }}>
+                {highlightEvidence}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* TAB BAR — only renders when the ticker has analyst-team content.
             Otherwise the panel looks exactly as it did pre-Phase B.5. */}
